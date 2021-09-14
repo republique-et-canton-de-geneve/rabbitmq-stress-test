@@ -23,9 +23,9 @@ import java.util.stream.IntStream;
 /**
  * Envoi et reception d'un lot de messages de RabbitMQ.
  */
-public class LoadProducerConsumer {
+public class ProducerConsumer {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LoadProducerConsumer.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProducerConsumer.class);
 
     private static final int NB_MESSAGES = 2;
 

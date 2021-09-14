@@ -11,4 +11,6 @@
 target/
 
 # Application
+mdp.properties
 logs/
+dependency-reduced-pom.xml
