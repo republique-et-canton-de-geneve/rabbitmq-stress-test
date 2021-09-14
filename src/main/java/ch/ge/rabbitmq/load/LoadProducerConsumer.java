@@ -54,6 +54,8 @@ public class LoadProducerConsumer {
 
     public static void produce(int nbMessages)
             throws NoSuchAlgorithmException, KeyManagementException, IOException {
+        LOGGER.info("Producteur lance'");
+
         // preparation de l'URL UAA
         List<NameValuePair> urlParameters = Utils.getUrlParameters();
 
@@ -75,8 +77,8 @@ public class LoadProducerConsumer {
 
             // ajout au channel des fonctions de traitement des acquittements
             channel.addConfirmListener(
-                    (deliveryTag, multiple) -> LOGGER.info("ack for {}", deliveryTag),
-                    (deliveryTag, multiple) -> LOGGER.info("nack for {}", deliveryTag));
+                    (deliveryTag, multiple) -> LOGGER.info("ack for {}, multiple = {}", deliveryTag, multiple),
+                    (deliveryTag, multiple) -> LOGGER.info("nack for {}, multiple = {}", deliveryTag, multiple));
             channel.addReturnListener((replyCode, replyText, exchange, routingKey, properties, body) ->
                     LOGGER.info("Retour pour message [{}] : replyCode = [{}], replyText = [{}], exchange = [{}], routing key = [{}]",
                             body, replyCode, replyText, exchange, routingKey));
@@ -93,14 +95,16 @@ public class LoadProducerConsumer {
                 }
             });
 
-            // attente des derniers acquittements
-            Utils.wait(3, "acquittement de RabbitMQ (producer confirms)");
+            // attente des derniers acquittements (producer confirms)
+            Utils.wait(3, "acquittements de RabbitMQ");
         } catch (Exception e) {
             LOGGER.error("Erreur recue", e);
         }
     }
 
     public static void consume() throws NoSuchAlgorithmException, KeyManagementException, IOException {
+        LOGGER.info("Consommateur lance'");
+
         // preparation de l'URL UAA
         List<NameValuePair> urlParameters = Utils.getUrlParameters();
 
