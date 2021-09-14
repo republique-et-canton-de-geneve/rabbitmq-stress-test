@@ -19,12 +19,15 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -34,28 +37,25 @@ public class Utils {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Utils.class);
 
-    private static final String UAA_TOKEN_URL = "***REMOVED***/oauth/token";
-    private static final String UAA_CLIENT_ID = "***REMOVED***";
-    private static final String UAA_CLIENT_SECRET = "***REMOVED***_secret";
-    private static final String UAA_GRANT_TYPE = "password";
-    private static final String UAA_RESPONSE_TYPE = "token";
-    private static final String GINA_USERNAME = "***REMOVED***";
-    private static final String GINA_PASSWORD = System.getenv("password");  // mot de passe AD
+    public static Properties PROPERTIES = new Properties();
 
-    private static final String RABBITMQ_URL = "***REMOVED***";
-    private static final int RABBITMQ_PORT = 5672;
-    private static final String RABBITMQ_VIRTUAL_HOST = "aelenu";
-    public static final String RABBITMQ_EXCHANGE = "simetier1-to-enu-main";
-    public static final String RABBITMQ_QUEUE_NAME = "simetier1-to-enu-main-q";
-    public static final String RABBITMQ_ROUTING_KEY = RABBITMQ_QUEUE_NAME;
+    // pas tres propre, mais commode
+    static int NB_SENT_MESSAGES = 0;
 
-    private static final String LOCK = "lock";
+    private static char[] MESSAGE_FILLING;
+
+    static {
+        final int MESSAGE_LENGTH = 100 * 1000;
+        char[] array = new char[MESSAGE_LENGTH];
+        Arrays.fill(array, '*');
+        MESSAGE_FILLING = array;
+    }
 
     private Utils() {
     }
 
-    public static String getAccessToken(SSLContext sslContext, List<NameValuePair> urlParameters) throws IOException {
-        HttpPost post = new HttpPost(UAA_TOKEN_URL);
+    static String getAccessToken(SSLContext sslContext, List<NameValuePair> urlParameters) throws IOException {
+        HttpPost post = new HttpPost(getProperty("uaa.token-url"));
         post.setEntity(new UrlEncodedFormEntity(urlParameters));
         SSLConnectionSocketFactory factory = new SSLConnectionSocketFactory(sslContext, new NoopHostnameVerifier());
         CloseableHttpClient httpClient = HttpClients.custom().setSSLSocketFactory(factory).build();
@@ -64,7 +64,7 @@ public class Utils {
         return obj.getString("access_token");
     }
 
-    public static SSLContext getSSLContext() throws NoSuchAlgorithmException, KeyManagementException{
+    static SSLContext getSSLContext() throws NoSuchAlgorithmException, KeyManagementException{
         TrustManager[] trustAllCerts = Utils.getTrustManager();
         SSLContext sslContext = SSLContext.getInstance("SSL");
         sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
@@ -72,56 +72,116 @@ public class Utils {
         return sslContext;
     }
 
-    public static ConnectionFactory getConnectionFactory(SSLContext sslContext, String accessToken) {
+    static ConnectionFactory getConnectionFactory(SSLContext sslContext, String accessToken) {
         ConnectionFactory connectionFactory = new ConnectionFactory();
-        connectionFactory.setHost(RABBITMQ_URL);
-        connectionFactory.setVirtualHost(RABBITMQ_VIRTUAL_HOST);
+        connectionFactory.setHost(getProperty("rabbitmq.url"));
+        connectionFactory.setVirtualHost(getProperty("rabbitmq.virtual-host"));
         connectionFactory.setPassword(accessToken);
-        connectionFactory.setPort(RABBITMQ_PORT);
+        connectionFactory.setPort(getIntegerProperty("rabbitmq.port"));
         connectionFactory.useSslProtocol(sslContext);
         return connectionFactory;
     }
 
-    public static List<NameValuePair> getUrlParameters() {
-        if (GINA_PASSWORD == null) {
-            throw new IllegalStateException("Le mot de passe AD n'a pas ete fourni");
-        }
+    static List<NameValuePair> getUrlParameters() {
         List<NameValuePair> urlParameters = new ArrayList<>();
-        urlParameters.add(new BasicNameValuePair("client_id", UAA_CLIENT_ID));
-        urlParameters.add(new BasicNameValuePair("client_secret", UAA_CLIENT_SECRET));
-        urlParameters.add(new BasicNameValuePair("grant_type", UAA_GRANT_TYPE));
-        urlParameters.add(new BasicNameValuePair("username", GINA_USERNAME));
-        urlParameters.add(new BasicNameValuePair("password", GINA_PASSWORD));
-        urlParameters.add(new BasicNameValuePair("response_type", UAA_RESPONSE_TYPE));
+        urlParameters.add(new BasicNameValuePair("client_id", getProperty("uaa.client-id")));
+        urlParameters.add(new BasicNameValuePair("client_secret", getProperty("uaa.client-secret")));
+        urlParameters.add(new BasicNameValuePair("grant_type", getProperty("uaa.grant-type")));
+        urlParameters.add(new BasicNameValuePair("username", getProperty("gina.username")));
+        urlParameters.add(new BasicNameValuePair("password", getProperty("gina.password")));
+        urlParameters.add(new BasicNameValuePair("response_type", getProperty("uaa.response-type")));
         return urlParameters;
     }
 
     private static TrustManager[] getTrustManager() {
         return new TrustManager[]{
-                new X509TrustManager() {
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return new X509Certificate[0];
-                    }
-
-                    public void checkClientTrusted(
-                            X509Certificate[] certs, String authType) {
-                    }
-
-                    public void checkServerTrusted(
-                            X509Certificate[] certs, String authType) {
-                    }
+            new X509TrustManager() {
+                public X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
                 }
+
+                public void checkClientTrusted(
+                    X509Certificate[] certs, String authType) {
+                }
+
+                public void checkServerTrusted(
+                    X509Certificate[] certs, String authType) {
+                }
+            }
         };
     }
 
-    public static void wait(long seconds, String info) {
+    static void wait(long milliseconds, String info) {
         try {
             LOGGER.info("Attente commence ({})", info);
-            TimeUnit.SECONDS.sleep(seconds);
+            TimeUnit.MILLISECONDS.sleep(milliseconds);
             LOGGER.info("Attente finie ({})", info);
         } catch (InterruptedException e) {
             LOGGER.warn("Recu exception", e);
         }
+    }
+
+    static void readProperties(String[] args) {
+        if (args.length != 2) {
+            throw new IllegalStateException("2 arguments sont attendus : fichier mdp + fichier autres proprietes");
+        }
+
+        String passwordFile = args[0];
+        String propsFile = args[1];
+
+        loadProperties(passwordFile, PROPERTIES);
+        loadProperties(propsFile, PROPERTIES);
+        LOGGER.info("Lu {} proprietes", PROPERTIES.size());
+    }
+
+    private static void loadProperties(String fileName, Properties props) {
+        LOGGER.info("Chargement du fichier [{}]", fileName);
+        try (FileInputStream is = new FileInputStream(fileName)) {
+            props.load(is);
+        } catch(Exception e) {
+            throw new IllegalStateException("Erreur a la lecture du fichier [" + fileName + "]", e);
+        }
+    }
+
+    static int getIntegerProperty(String name) {
+        return Integer.parseInt(getProperty(name));
+    }
+
+    static String getProperty(String name) {
+        String val = PROPERTIES.getProperty(name);
+        if (val == null) {
+            throw new IllegalStateException("Propriete [" + name + "] pas trouvee");
+        }
+        return val;
+    }
+
+    static int getScenario() {
+        return getIntegerProperty("scenario.type");
+    }
+
+    static int getNbIterations() {
+        return getIntegerProperty("scenario" + getScenario() + ".iterations");
+    }
+
+    static int getNbMessages(int iteration) {
+        if (getScenario() == 2) {
+            return 1 + getIntegerProperty("scenario2.increment") * (iteration - 1);
+        } else {
+            return 1;
+        }
+    }
+
+    static int getInterval() {
+        return getIntegerProperty("scenario" + getScenario() + ".interval");
+    }
+
+    static String createNextMessage() {
+        NB_SENT_MESSAGES++;
+        return new StringBuilder("Message ")
+                .append(NB_SENT_MESSAGES)
+                .append(" ")
+                .append(MESSAGE_FILLING)
+                .toString();
     }
 
 }

@@ -20,6 +20,14 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
 
+import static ch.ge.rabbitmq.load.Utils.NB_SENT_MESSAGES;
+import static ch.ge.rabbitmq.load.Utils.createNextMessage;
+import static ch.ge.rabbitmq.load.Utils.getInterval;
+import static ch.ge.rabbitmq.load.Utils.getNbIterations;
+import static ch.ge.rabbitmq.load.Utils.getNbMessages;
+import static ch.ge.rabbitmq.load.Utils.getProperty;
+import static ch.ge.rabbitmq.load.Utils.getScenario;
+
 /**
  * Envoi et reception d'un lot de messages de RabbitMQ.
  */
@@ -27,32 +35,34 @@ public class ProducerConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProducerConsumer.class);
 
-    private static final int NB_MESSAGES = 2;
-
     /**
      * Lancement en parallele de la production et de la consommation.
      */
-    public static void main(String[] argv) {
+    public static void main(String[] args) {
+        Utils.readProperties(args);
+
         // production
         Executors.newCachedThreadPool().submit(() -> {
                 try {
-                    produce(NB_MESSAGES);
+                    produce();
                 } catch (Exception e) {
                     LOGGER.error("Erreur lors de la production", e);
                 }
         });
 
         // consommation
-        Executors.newCachedThreadPool().submit(() -> {
+        if (getScenario() != 3) {
+            Executors.newCachedThreadPool().submit(() -> {
                 try {
                     consume();
                 } catch (Exception e) {
                     LOGGER.error("Erreur lors de la consommation", e);
                 }
-        });
+            });
+        }
     }
 
-    public static void produce(int nbMessages)
+    public static void produce()
             throws NoSuchAlgorithmException, KeyManagementException, IOException {
         LOGGER.info("Producteur lance'");
 
@@ -85,18 +95,30 @@ public class ProducerConsumer {
             LOGGER.info("Callbacks ajoutes");
 
             // envoi des messages a RabbitMQ
-            IntStream.range(1, nbMessages + 1).forEach(i -> {
-                String message = "Message " + i;
-                try {
-                    channel.basicPublish(Utils.RABBITMQ_EXCHANGE, Utils.RABBITMQ_ROUTING_KEY, null, message.getBytes(Charset.defaultCharset()));
-                    LOGGER.info("Message envoye : [{}]", message);
-                } catch (IOException e) {
-                    LOGGER.error("Erreur recue lors de la production du message {}", i, e);
-                }
+            IntStream.range(1, getNbIterations() + 1).forEach(iteration -> {
+                // a chaque iteration, les scenarios 1 et 3 envoient 1 message, tandis que le scenario 2
+                // envoie un nombre croissant de messages
+                IntStream.range(1, getNbMessages(iteration) + 1).forEach(i -> {
+                    String message = createNextMessage();
+                    LOGGER.warn("Taille = {}", message.length());
+                    try {
+                        channel.basicPublish(
+                                getProperty("rabbitmq.exchange"),
+                                getProperty("rabbitmq.routing-key"),
+                                null,
+                                message.getBytes(Charset.defaultCharset()));
+                        LOGGER.info("Message {} envoye", NB_SENT_MESSAGES);
+                    } catch (IOException e) {
+                        LOGGER.error("Erreur recue lors de la production du message. Iteration = {}", iteration, e);
+                    }
+                });
+
+                // attente entre 2 messages (ou entre 2 salves de messages)
+                Utils.wait(getInterval(), "producteur");
             });
 
             // attente des derniers acquittements (producer confirms)
-            Utils.wait(3, "acquittements de RabbitMQ");
+            Utils.wait(3 * 1000, "acquittements de RabbitMQ au producteur");
         } catch (Exception e) {
             LOGGER.error("Erreur recue", e);
         }
@@ -126,15 +148,15 @@ public class ProducerConsumer {
 
             // preparation des fonctions de retour
             DeliverCallback deliverCallback = (consumerTag, delivery) ->
-                LOGGER.info("Message recu : [{}]", new String(delivery.getBody(), StandardCharsets.UTF_8));
+                LOGGER.info("Message recu : [{}]", new String(delivery.getBody(), StandardCharsets.UTF_8).substring(0, 20));
             CancelCallback cancelCallback = consumerTag ->
                 LOGGER.info("consumerTag [{}] annule", consumerTag);
 
             // attente des messages de RabbitMQ
-            channel.basicConsume(Utils.RABBITMQ_QUEUE_NAME, true, deliverCallback, cancelCallback);
+            channel.basicConsume(getProperty("rabbitmq.queue"), true, deliverCallback, cancelCallback);
 
-            // attente de l'acquittement
-            Utils.wait(2, "consommation des derniers messages");
+            // attente que le producteur ait tout produit
+            Utils.wait(getNbIterations() * (getInterval() + 50), "consommateur");
         } catch (Exception e) {
             LOGGER.error("Erreur recue", e);
         }
