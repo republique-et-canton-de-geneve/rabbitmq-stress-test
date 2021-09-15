@@ -100,7 +100,6 @@ public class ProducerConsumer {
                 // envoie un nombre croissant de messages
                 IntStream.range(1, getNbMessages(iteration) + 1).forEach(i -> {
                     String message = createNextMessage();
-                    LOGGER.warn("Taille = {}", message.length());
                     try {
                         channel.basicPublish(
                                 getProperty("rabbitmq.exchange"),

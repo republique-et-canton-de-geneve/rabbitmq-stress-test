@@ -42,6 +42,7 @@ public class Utils {
     // pas tres propre, mais commode
     static int NB_SENT_MESSAGES = 0;
 
+    /** remplissage du message, pour atteindre par ex 100 ko */
     private static char[] MESSAGE_FILLING;
 
     static {
