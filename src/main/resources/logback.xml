@@ -19,7 +19,7 @@
 			<maxHistory>30</maxHistory>
 		</rollingPolicy>
 		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-			<pattern>%date{HH:mm:ss} %-5level [%thread]  %msg%n</pattern>
+			<pattern>%date{HH:mm:ss.SSS} %-5level [%thread]  %msg%n</pattern>
 		</encoder>
 		<prudent>true</prudent>
 		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">

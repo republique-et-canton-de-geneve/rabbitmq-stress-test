@@ -40,6 +40,7 @@ public class ProducerConsumer {
      */
     public static void main(String[] args) {
         Utils.readProperties(args);
+        LOGGER.info("Scenario {}", getScenario());
 
         // production
         Executors.newCachedThreadPool().submit(() -> {
@@ -74,7 +75,7 @@ public class ProducerConsumer {
 
         // demande a UAA d'un jeton OAuth
         String accessToken = Utils.getAccessToken(sslContext, urlParameters);
-        LOGGER.info("Access token = [{}]", accessToken);
+        LOGGER.info("Access token du producteur = [{}]", accessToken);
 
         // connexion a RabbitMQ
         ConnectionFactory connectionFactory = Utils.getConnectionFactory(sslContext, accessToken);
@@ -96,6 +97,8 @@ public class ProducerConsumer {
 
             // envoi des messages a RabbitMQ
             IntStream.range(1, getNbIterations() + 1).forEach(iteration -> {
+                LOGGER.info("Iteration {} sur {}", iteration, getNbIterations());
+
                 // a chaque iteration, les scenarios 1 et 3 envoient 1 message, tandis que le scenario 2
                 // envoie un nombre croissant de messages
                 IntStream.range(1, getNbMessages(iteration) + 1).forEach(i -> {
@@ -134,7 +137,7 @@ public class ProducerConsumer {
 
         // demande a UAA d'un jeton OAuth
         String accessToken = Utils.getAccessToken(sslContext, urlParameters);
-        LOGGER.info("Access token = [{}]", accessToken);
+        LOGGER.info("Access token du consommateur = [{}]", accessToken);
 
         // connexion a RabbitMQ
         ConnectionFactory connectionFactory = Utils.getConnectionFactory(sslContext, accessToken);
@@ -146,8 +149,10 @@ public class ProducerConsumer {
             LOGGER.info("selectOk = [{}]", selectOk);
 
             // preparation des fonctions de retour
-            DeliverCallback deliverCallback = (consumerTag, delivery) ->
-                LOGGER.info("Message recu : [{}]", new String(delivery.getBody(), StandardCharsets.UTF_8).substring(0, 20));
+            DeliverCallback deliverCallback = (consumerTag, delivery) -> {
+                String msg = new String(delivery.getBody(), StandardCharsets.UTF_8);
+                LOGGER.info("Message recu : [{} ...] (taille = {})", msg.substring(0, 20), msg.length());
+            };
             CancelCallback cancelCallback = consumerTag ->
                 LOGGER.info("consumerTag [{}] annule", consumerTag);
 
@@ -155,11 +160,26 @@ public class ProducerConsumer {
             channel.basicConsume(getProperty("rabbitmq.queue"), true, deliverCallback, cancelCallback);
 
             // attente que le producteur ait tout produit
-            Utils.wait(getNbIterations() * (getInterval() + 50), "consommateur");
+            Utils.wait(getNbIterations() * (getInterval() + getConsumerWaitMargin()), "consommateur");
         } catch (Exception e) {
             LOGGER.error("Erreur recue", e);
         }
     }
 
-}
+    /**
+     * Temps d'attente supplementaire du consommateur avant que le consommateur ne s'arrete.
+     * Tient compte du fait que, durant une iteration, la production du ou des messages n'est
+     * pas instantanee, aussi le consommateur ne peut pas simplement s'arreter apres nbIterations * interval
+     * millisecondes.
+     * Cette marge est surtout importante pour le scenario 2 qui produit plusieurs messages par iteration.
+     * Exprimee en millisecondes a chaque iteration.
+     */
+    private static int getConsumerWaitMargin() {
+        if (getScenario() == 1 || getScenario() == 3) {
+            return 20;
+        } else {
+            return getNbIterations();
+        }
+    }
 
+}

@@ -26,14 +26,14 @@ Ce sont donc des producteur et consommateur légers.
 
 On produit des messages à un rythme faible et régulier durant une longue période.
 
-Résultat attendu : le système doit supporter 2 messages par secondes durant 8 heures.
+Objectif : le système doit supporter 2 messages par seconde durant 8 heures.
 
 ## Scénario 2 : test de charge
 
 On produit des messages à un rythme croissant, jusqu'à atteindre la capacité d'absorption
 de messages du système.
 
-Résultat attendu : si l'on lance chaque seconde un message de plus qu'à la seconde précédente,
+Objectif : si l'on lance chaque seconde un message de plus qu'à la seconde précédente,
 le système doit supporter la charge durant 1 minute 40 secondes
 (charge finale : 100 messages/sec, soit 10 Mo/sec). 
 
@@ -42,7 +42,7 @@ le système doit supporter la charge durant 1 minute 40 secondes
 On produit des messages à un rythme faible et régulier, mais sans les consommer, jusqu'à épuiser
 la capacité de stockage de RabbitMQ.
 
-Résultat attendu : le système doit supporter 2 messages par seconde durant 3 heures
+Objectif : le système doit supporter 2 messages par seconde durant 3 heures
 (soit environ 2 Go de messages stockés).
 
 # Construction de l'application

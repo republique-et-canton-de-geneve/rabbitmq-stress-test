@@ -46,8 +46,8 @@ public class Utils {
     private static char[] MESSAGE_FILLING;
 
     static {
-        final int MESSAGE_LENGTH = 100 * 1000;
-        char[] array = new char[MESSAGE_LENGTH];
+        final int MESSAGE_SIZE = 100 * 1000;
+        char[] array = new char[MESSAGE_SIZE];
         Arrays.fill(array, '*');
         MESSAGE_FILLING = array;
     }
