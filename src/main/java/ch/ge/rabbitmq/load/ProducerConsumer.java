@@ -151,7 +151,7 @@ public class ProducerConsumer {
             // preparation des fonctions de retour
             DeliverCallback deliverCallback = (consumerTag, delivery) -> {
                 String msg = new String(delivery.getBody(), StandardCharsets.UTF_8);
-                LOGGER.info("Message recu : [{} ...] (taille = {})", msg.substring(0, 20), msg.length());
+                LOGGER.info("Message recu : [{} ...] (taille = {} octets)", msg.substring(0, 20), msg.length());
             };
             CancelCallback cancelCallback = consumerTag ->
                 LOGGER.info("consumerTag [{}] annule", consumerTag);
@@ -178,7 +178,7 @@ public class ProducerConsumer {
         if (getScenario() == 1 || getScenario() == 3) {
             return 20;
         } else {
-            return getNbIterations();
+            return 2 * getNbIterations();
         }
     }
 
