@@ -37,13 +37,13 @@ public class Utils {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Utils.class);
 
-    public static Properties PROPERTIES = new Properties();
+    private static final Properties PROPERTIES = new Properties();
 
     // pas tres propre, mais commode
     static int NB_SENT_MESSAGES = 0;
 
     /** remplissage du message, pour atteindre par ex 100 ko */
-    private static char[] MESSAGE_FILLING;
+    private static final char[] MESSAGE_FILLING;
 
     static {
         final int MESSAGE_SIZE = 100 * 1000;
@@ -112,7 +112,7 @@ public class Utils {
         };
     }
 
-    static void wait(long milliseconds, String info) {
+    static void wait(int milliseconds, String info) {
         try {
             LOGGER.info("Attente commence ({})", info);
             TimeUnit.MILLISECONDS.sleep(milliseconds);
