@@ -1,79 +1,89 @@
-# Tests de charge de RabbitMQ
+# RabbitMQ stress tests
 
-Ce projet contient une série de tests de production et de consommation en masse de messages
-RabbitMQ.
+This projet defines a set of tests of en-masse production and consumption of RabbitMQ messages.
+These tests were used to validate RabbitMQ as the new tool as a message-oriented middleware, to replace
+Java Message Service (JMS).
 
-Les tests sont écrits en Java, sans l'aide de Spring ni de Spring Boot afin d'être au plus bas niveau possible
-d'interaction avec RabbitMQ.
+The State of Geneva's acceptance criteria are very undemanding, as compared with
+to RabbitMQ's notorious out-of-the-box capacity of handling many messages in short period of time.
+Therefore, these tests were used to validate the State of Geneva's own setup of RabbitMQ - more than to validate the
+RabbitMQ tool itself.
+They all passed with success.
 
-# Scénarios
+The tests are written in Java.
+The usual Spring and Spring Boot code harness is not used, in order for the code to remain
+as close as possible to the low-level Java client for RabbitMQ.
 
-Plusieurs scénarios de test ont été mis en oeuvre.
+# Scenarios
 
-Dans tous ces scénarios, la taille des messages est d'environ 100 ko, soit à peu près la
-taille maximale de 128 ko acceptée à l'État.
+Three test scenarios are implemented.
 
-Dans tous ces scénarios, l'accès à RabbitMQ est sécurisé par un UAA.
+In every scenario, the message size is 100 kB, close to the maximum message size of 128 kB
+chosen at the State of Geneva.
 
-Dans tous ces scénarios, le producteur se borne à construire le message et à l'envoyer à
-RabbitMQ, tandis que le consommateur se borne à recevoir les messages et à émettre une
-trace succinte.
-Ce sont donc des producteur et consommateur légers.
+In every scenario, access to RabbitMQ is guarded by a Cloud Foundry
+[User Account and Authentication](https://docs.cloudfoundry.org/concepts/architecture/uaa.html)
+(UAA) server.
 
-## Scénario 1 : test d'endurance
+In every scenario, the producer just creates the message and sends it to the RabbitMQ broker;
+similarly the consumer just receives the message and logs a short trace.
+Accordingly, these are very light producers and consumers.
 
-On produit des messages à un rythme faible et régulier durant une longue période.
+## Scenario 1 : reliability (endurance) test
 
-Objectif : le système doit supporter 2 messages par seconde durant 8 heures.
+A message is produced with a regular, slow pace, during a long period.
 
-## Scénario 2 : test de charge
+Acceptance criterion: the system must withstand 2 messages per second durant 8 hours.
 
-On produit des messages à un rythme croissant, jusqu'à atteindre la capacité d'absorption
-de messages du système.
+## Scenario 2 : load test
 
-Objectif : si l'on lance chaque seconde un message de plus qu'à la seconde précédente,
-le système doit supporter la charge durant 1 minute 40 secondes
-(charge finale : 100 messages/sec, soit 10 Mo/sec). 
+Messages are produced with an increasing pace, until exhausting the processing capacity of the system.
 
-## Scénario 3 : test de contrôle de la capacité de stockage
+Acceptance criterion: at every second, 1 more message is produced than at the previous second, and
+the system must withstand the load during 1 minute and 40 seconds.
+The final load is thus 100 messages per second, that is, 10 MB/sec.
 
-On produit des messages à un rythme faible et régulier, mais sans les consommer, jusqu'à épuiser
-la capacité de stockage de RabbitMQ.
 
-Objectif : le système doit supporter 2 messages par seconde durant 3 heures
-(soit environ 2 Go de messages stockés).
+## Scenario 3 : storage capacity test
 
-# Construction de l'application
+Messages are produced with a regular, slow pace, during a long period.
+The messages are not consumed at all.
+Over a long period of time, the message storage capacity should be exhausted.
 
-Lancer la commande
+Acceptance criterion: the system must withstand 2 messages per second during 3 hours.
+This roughly amounts to 2 GB of stored messages.
+
+# Build
+
+Run the following Maven command:
 
 ```mvn clean package```
 
-pour créer le fichier JAR.
+to create the JAR file (an uber jar).
 
-# Préalables à l'exécution d'un scénario
+# Prerequisites to run any scenario
 
-Dans RabbitMQ, on a créé les échanges, clefs de routage et queues mentionnés dans le fichier de propriétés
-`scenario.properties` décrit plus bas.
+In the RabbitMQ broker, the exchanges, routing keys and queues mentioned in the properties
+file `scenario.properties` described hereafter must be set up.
 
-Dans l'UAA, on a créé les client_id, les groupes et les groupes externes nécessaires au fonctionnement 
-du producteur et du consommateur.
+In the UAA server, the client_id, the groups and the external groups described in the latter file
+must be set up.
+The configuration can be easily downgraded to use RabbitMQ's "guest/guest" credentials and no UAA.
 
-# Exécution d'un scénario
+# Running a scnario
 
-Avec Java 11+, lancer la commande
+Using Java 8+, run the following command:
 
 ```java -jar target/rabbitmq-load.jar mdp.properties scenario.properties```
 
-où :
-- le fichier `mdp.properties` contient une seule propriété `gina.password = XXX`, où `XXX`
-  est la valeur du mot de passe de l'utilisateur AD (càd Gina) renseigné dans
-  l'autre fichier `scenario.properties` (propriété `gina.user`).
-- le fichier `scenario.properties` contient les propriétés pour un scénario.
+where:
+- file `mdp.properties` is a one-line file containing a single property `ad.password = XXX`, where `XXX`
+  is the password of the AD user mentioned in file `scenario.properties` (property `ad.user`).
+- file `scenario.properties` contains the properties for a scenario.
 
-Un fichier `scenario.properties` est fourni dans les sources à titre d'exemple.
-Il contient des valeurs pour chacun des scénarios possibles.
+A sample `scenario.properties` file is supplied in the sources.
+It provides values for each of the scenarios.
 
-La raison pour laquelle la propriété `gina.password` apparaît dans un fichier séparé est de permettre
-au fichier principal `scenario.properties` d'être inclus dans les sources sans exposer de mots
-de passe.
+The reason for defining property `ad.password` in its own separate file is to allow the team to include the
+main properties file `scenario.properties` within the State of Geneva's Git repository without exposing - even
+locally - any password.

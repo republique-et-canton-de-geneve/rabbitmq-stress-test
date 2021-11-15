@@ -29,14 +29,14 @@ import static ch.ge.rabbitmq.load.Utils.getProperty;
 import static ch.ge.rabbitmq.load.Utils.getScenario;
 
 /**
- * Envoi et reception d'un lot de messages de RabbitMQ.
+ * Production and consumption of RabbitMQ messages.
  */
 public class ProducerConsumer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProducerConsumer.class);
 
     /**
-     * Lancement en parallele de la production et de la consommation.
+     * Starts the producer and the producer. They run concurrently.
      */
     public static void main(String[] args) {
         Utils.readProperties(args);
@@ -47,7 +47,7 @@ public class ProducerConsumer {
                 try {
                     produce();
                 } catch (Exception e) {
-                    LOGGER.error("Erreur lors de la production", e);
+                    LOGGER.error("Error during message production", e);
                 }
         });
 
@@ -57,7 +57,7 @@ public class ProducerConsumer {
                 try {
                     consume();
                 } catch (Exception e) {
-                    LOGGER.error("Erreur lors de la consommation", e);
+                    LOGGER.error("Error during message consumption", e);
                 }
             });
         }
@@ -65,42 +65,42 @@ public class ProducerConsumer {
 
     public static void produce()
             throws NoSuchAlgorithmException, KeyManagementException, IOException {
-        LOGGER.info("Producteur lance'");
+        LOGGER.info("Producer started'");
 
-        // preparation de l'URL UAA
+        // set up the UAA URL
         List<NameValuePair> urlParameters = Utils.getUrlParameters();
 
-        // preparation de TLS pour les appels a UAA
+        // set up TLS for the calls to UAA
         SSLContext sslContext = Utils.getSSLContext();
 
-        // demande a UAA d'un jeton OAuth
+        // request an OAuth token from UAA
         String accessToken = Utils.getAccessToken(sslContext, urlParameters);
-        LOGGER.info("Access token du producteur = [{}]", accessToken);
+        LOGGER.info("Producer's access token = [{}]", accessToken);
 
-        // connexion a RabbitMQ
+        // connect to RabbitMQ
         ConnectionFactory connectionFactory = Utils.getConnectionFactory(sslContext, accessToken);
         try (Connection connection = connectionFactory.newConnection();
              Channel channel = connection.createChannel()) {
 
-            // instruction au channel d'envoyer des acquittements (publisher confirms)
+            // instruct the channel to send publisher confirms
             AMQP.Confirm.SelectOk selectOk = channel.confirmSelect();
             LOGGER.info("selectOk = [{}]", selectOk);
 
-            // ajout au channel des fonctions de traitement des acquittements
+            // instrument the channel with functions to handle the publisher confirms
             channel.addConfirmListener(
                     (deliveryTag, multiple) -> LOGGER.info("ack for {}, multiple = {}", deliveryTag, multiple),
                     (deliveryTag, multiple) -> LOGGER.info("nack for {}, multiple = {}", deliveryTag, multiple));
             channel.addReturnListener((replyCode, replyText, exchange, routingKey, properties, body) ->
-                    LOGGER.info("Retour pour message [{}] : replyCode = [{}], replyText = [{}], exchange = [{}], routing key = [{}]",
+                    LOGGER.info("Response for message [{}] : replyCode = [{}], replyText = [{}], exchange = [{}], routing key = [{}]",
                             body, replyCode, replyText, exchange, routingKey));
-            LOGGER.info("Callbacks ajoutes");
+            LOGGER.info("The callbacks were added");
 
-            // envoi des messages a RabbitMQ
+            // send the messages to RabbitMQ
             IntStream.range(1, getNbIterations() + 1).forEach(iteration -> {
-                LOGGER.info("Iteration {} sur {}", iteration, getNbIterations());
+                LOGGER.info("Iteration {} of {}", iteration, getNbIterations());
 
-                // a chaque iteration, les scenarios 1 et 3 envoient 1 message, tandis que le scenario 2
-                // envoie un nombre croissant de messages
+                // at every iteration, scenarios 1 and 3 publish one message, whereas scenario 2 publishes
+                // an increasing number of messages
                 IntStream.range(1, getNbMessages(iteration) + 1).forEach(i -> {
                     String message = createNextMessage();
                     try {
@@ -109,70 +109,69 @@ public class ProducerConsumer {
                                 getProperty("rabbitmq.routing-key"),
                                 null,
                                 message.getBytes(Charset.defaultCharset()));
-                        LOGGER.info("Message {} envoye", NB_SENT_MESSAGES);
+                        LOGGER.info("Message {} sent", NB_SENT_MESSAGES);
                     } catch (IOException e) {
-                        LOGGER.error("Erreur recue lors de la production du message. Iteration = {}", iteration, e);
+                        LOGGER.error("Error caught during the message production. Iteration = {}", iteration, e);
                     }
                 });
 
-                // attente entre 2 messages (ou entre 2 salves de messages)
-                Utils.wait(getInterval(), "producteur");
+                // wait between 2 messages (scenario 2: between 2 batches of messages)
+                Utils.wait(getInterval(), "producer");
             });
 
-            // attente des derniers acquittements (producer confirms)
-            Utils.wait(3 * 1000, "acquittements de RabbitMQ au producteur");
+            // before exiting, wait for the last producer confirms
+            Utils.wait(3 * 1000, "producer confirms");
         } catch (Exception e) {
-            LOGGER.error("Erreur recue", e);
+            LOGGER.error("Error caught", e);
         }
     }
 
     public static void consume() throws NoSuchAlgorithmException, KeyManagementException, IOException {
-        LOGGER.info("Consommateur lance'");
+        LOGGER.info("Consumer started");
 
-        // preparation de l'URL UAA
+        // set up the UAA URL
         List<NameValuePair> urlParameters = Utils.getUrlParameters();
 
-        // preparation de TLS pour les appels a UAA
+        // set up TLS for the calls to UAA
         SSLContext sslContext = Utils.getSSLContext();
 
-        // demande a UAA d'un jeton OAuth
+        // request an OAuth token from UAA
         String accessToken = Utils.getAccessToken(sslContext, urlParameters);
-        LOGGER.info("Access token du consommateur = [{}]", accessToken);
+        LOGGER.info("Consumer's access token = [{}]", accessToken);
 
-        // connexion a RabbitMQ
+        // connect to RabbitMQ
         ConnectionFactory connectionFactory = Utils.getConnectionFactory(sslContext, accessToken);
         try (Connection connection = connectionFactory.newConnection();
              Channel channel = connection.createChannel()) {
 
-            // instruction au channel d'envoyer des acquittements (consumer acknowledgements)
+            // instruct the channel to send consumer acknowledgements
             AMQP.Confirm.SelectOk selectOk = channel.confirmSelect();
             LOGGER.info("selectOk = [{}]", selectOk);
 
-            // preparation des fonctions de retour
+            // set up the callbacks to handle the consumer acknowledgements
             DeliverCallback deliverCallback = (consumerTag, delivery) -> {
                 String msg = new String(delivery.getBody(), StandardCharsets.UTF_8);
-                LOGGER.info("Message recu : [{} ...] (taille = {} octets)", msg.substring(0, 20), msg.length());
+                LOGGER.info("Message received: [{} ...] (size = {} bytes)", msg.substring(0, 20), msg.length());
             };
             CancelCallback cancelCallback = consumerTag ->
-                LOGGER.info("consumerTag [{}] annule", consumerTag);
+                LOGGER.info("ConsumerTag [{}] canceled", consumerTag);
 
-            // attente des messages de RabbitMQ
+            // wait for messages from RabbitMQ
             channel.basicConsume(getProperty("rabbitmq.queue"), true, deliverCallback, cancelCallback);
 
-            // attente que le producteur ait tout produit
+            // wait the producer is done with sending messages
             Utils.wait(getNbIterations() * (getInterval() + getConsumerWaitMargin()), "consommateur");
         } catch (Exception e) {
-            LOGGER.error("Erreur recue", e);
+            LOGGER.error("Error caught", e);
         }
     }
 
     /**
-     * Temps d'attente supplementaire du consommateur avant que le consommateur ne s'arrete.
-     * Tient compte du fait que, durant une iteration, la production du ou des messages n'est
-     * pas instantanee, aussi le consommateur ne peut pas simplement s'arreter apres nbIterations * interval
-     * millisecondes.
-     * Cette marge est surtout importante pour le scenario 2 qui produit plusieurs messages par iteration.
-     * Exprimee en millisecondes a chaque iteration.
+     * Additional wait time for the consumer before the consumer exits.
+     * It is used for accounting the fact that, during an iteration, the production of the message (or messages) is
+     * not instantaneous, so the consumer cannot exit after (nbIterations * interval) milliseconds.
+     * Specifically, this margin is required for scenario 2, because scenario 2 produces several messages per iteration.
+     * It is expressed in milliseconds at every iteration.
      */
     private static int getConsumerWaitMargin() {
         if (getScenario() == 1 || getScenario() == 3) {

@@ -31,7 +31,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Methodes et variables communues au producteur et au consommateur.
+ * Functions and variables that are common to the producer and the consumer.
  */
 public class Utils {
 
@@ -39,10 +39,10 @@ public class Utils {
 
     private static final Properties PROPERTIES = new Properties();
 
-    // pas tres propre, mais commode
+    // not very clean, yet handy
     static int NB_SENT_MESSAGES = 0;
 
-    /** remplissage du message, pour atteindre par ex 100 ko */
+    /** filling of the message body, to attain 100 kB */
     private static final char[] MESSAGE_FILLING;
 
     static {
@@ -88,8 +88,8 @@ public class Utils {
         urlParameters.add(new BasicNameValuePair("client_id", getProperty("uaa.client-id")));
         urlParameters.add(new BasicNameValuePair("client_secret", getProperty("uaa.client-secret")));
         urlParameters.add(new BasicNameValuePair("grant_type", getProperty("uaa.grant-type")));
-        urlParameters.add(new BasicNameValuePair("username", getProperty("gina.username")));
-        urlParameters.add(new BasicNameValuePair("password", getProperty("gina.password")));
+        urlParameters.add(new BasicNameValuePair("username", getProperty("ad.username")));
+        urlParameters.add(new BasicNameValuePair("password", getProperty("ad.password")));
         urlParameters.add(new BasicNameValuePair("response_type", getProperty("uaa.response-type")));
         return urlParameters;
     }
@@ -124,7 +124,7 @@ public class Utils {
 
     static void readProperties(String[] args) {
         if (args.length != 2) {
-            throw new IllegalStateException("2 arguments sont attendus : fichier mdp + fichier autres proprietes");
+            throw new IllegalStateException("2 arguments are expected: password file + other properties file");
         }
 
         String passwordFile = args[0];
@@ -132,15 +132,15 @@ public class Utils {
 
         loadProperties(passwordFile, PROPERTIES);
         loadProperties(propsFile, PROPERTIES);
-        LOGGER.info("Lu {} proprietes", PROPERTIES.size());
+        LOGGER.info("Read {} proprietes", PROPERTIES.size());
     }
 
     private static void loadProperties(String fileName, Properties props) {
-        LOGGER.info("Chargement du fichier [{}]", fileName);
+        LOGGER.info("Loading file [{}]", fileName);
         try (FileInputStream is = new FileInputStream(fileName)) {
             props.load(is);
         } catch(Exception e) {
-            throw new IllegalStateException("Erreur a la lecture du fichier [" + fileName + "]", e);
+            throw new IllegalStateException("Error while reading file [" + fileName + "]", e);
         }
     }
 
@@ -151,7 +151,7 @@ public class Utils {
     static String getProperty(String name) {
         String val = PROPERTIES.getProperty(name);
         if (val == null) {
-            throw new IllegalStateException("Propriete [" + name + "] pas trouvee");
+            throw new IllegalStateException("Property [" + name + "] was not found");
         }
         return val;
     }
