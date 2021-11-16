@@ -3,8 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>ch.ge.rabbitmq</groupId>
-    <artifactId>rabbitmq-load</artifactId>
+    <artifactId>rabbitmq-stress-test</artifactId>
     <version>1.1-SNAPSHOT</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
     <build>
         <plugins>
@@ -26,7 +30,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <finalName>rabbitmq-load-${version}</finalName>
+                            <finalName>rabbitmq-load-${project.version}</finalName>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>ch.ge.rabbitmq.stress.ProducerConsumer</mainClass>
