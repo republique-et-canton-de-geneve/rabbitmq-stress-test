@@ -1,3 +1,17 @@
+Maven build:
+
+[![Build with GitHub](https://github.com/republique-et-canton-de-geneve/rabbitmq-stress-test/actions/workflows/maven.yml/badge.svg)](https://github.com/republique-et-canton-de-geneve/rabbitmq-stress-test/actions/workflows/maven.yml)
+
+SonarCloud analysis:
+
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=republique-et-canton-de-geneve_rabbitmq-stress-test&metric=bugs)](https://sonarcloud.io/dashboard?id=republique-et-canton-de-geneve_rabbitmq-stress-test)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=republique-et-canton-de-geneve_rabbitmq-stress-test&metric=vulnerabilities)](https://sonarcloud.io/dashboard?id=republique-et-canton-de-geneve_rabbitmq-stress-test)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=republique-et-canton-de-geneve_rabbitmq-stress-test&metric=code_smells)](https://sonarcloud.io/dashboard?id=republique-et-canton-de-geneve_rabbitmq-stress-test)
+
+Licence :
+
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/why-affero-gpl.html)
+
 # RabbitMQ stress tests
 
 This projet defines a set of tests of en-masse production and consumption of RabbitMQ messages.
