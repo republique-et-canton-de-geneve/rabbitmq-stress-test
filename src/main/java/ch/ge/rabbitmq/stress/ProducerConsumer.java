@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package ch.ge.rabbitmq.load;
+package ch.ge.rabbitmq.stress;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.CancelCallback;
@@ -38,13 +38,13 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
 
-import static ch.ge.rabbitmq.load.Utils.NB_SENT_MESSAGES;
-import static ch.ge.rabbitmq.load.Utils.createNextMessage;
-import static ch.ge.rabbitmq.load.Utils.getInterval;
-import static ch.ge.rabbitmq.load.Utils.getNbIterations;
-import static ch.ge.rabbitmq.load.Utils.getNbMessages;
-import static ch.ge.rabbitmq.load.Utils.getProperty;
-import static ch.ge.rabbitmq.load.Utils.getScenario;
+import static ch.ge.rabbitmq.stress.Utils.NB_SENT_MESSAGES;
+import static ch.ge.rabbitmq.stress.Utils.createNextMessage;
+import static ch.ge.rabbitmq.stress.Utils.getInterval;
+import static ch.ge.rabbitmq.stress.Utils.getNbIterations;
+import static ch.ge.rabbitmq.stress.Utils.getNbMessages;
+import static ch.ge.rabbitmq.stress.Utils.getProperty;
+import static ch.ge.rabbitmq.stress.Utils.getScenario;
 
 /**
  * Production and consumption of RabbitMQ messages.

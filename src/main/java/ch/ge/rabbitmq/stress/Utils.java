@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package ch.ge.rabbitmq.load;
+package ch.ge.rabbitmq.stress;
 
 import com.rabbitmq.client.ConnectionFactory;
 import org.apache.http.NameValuePair;
